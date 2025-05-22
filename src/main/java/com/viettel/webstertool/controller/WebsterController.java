@@ -70,6 +70,47 @@ public class WebsterController {
     }
 
     /**
+     * Add a new phase - Simple approach without HTMX fragments
+     */
+    @PostMapping("/add-phase")
+    public String addPhase(@ModelAttribute("websterInput") WebsterCalculationInputDTO inputDTO) {
+        List<PhaseInputDTO> phases = inputDTO.getPhases();
+        if (phases == null) {
+            phases = new ArrayList<>();
+            inputDTO.setPhases(phases);
+        }
+
+        int nextPhaseId = phases.size() + 1;
+        phases.add(createDefaultPhase(nextPhaseId, "Phase " + nextPhaseId, 400.0));
+
+        // Redirect back to main form with updated data
+        return "redirect:/?action=added";
+    }
+
+    /**
+     * Remove a phase - Simple approach without HTMX fragments
+     */
+    @PostMapping("/remove-phase/{index}")
+    public String removePhase(@PathVariable int index,
+                              @ModelAttribute("websterInput") WebsterCalculationInputDTO inputDTO) {
+        List<PhaseInputDTO> phases = inputDTO.getPhases();
+        if (phases != null && index >= 0 && index < phases.size() && phases.size() > 1) {
+            phases.remove(index);
+
+            // Renumber the phase IDs to maintain sequence
+            for (int i = 0; i < phases.size(); i++) {
+                phases.get(i).setPhaseId(i + 1);
+                if (phases.get(i).getPhaseName().startsWith("Phase ")) {
+                    phases.get(i).setPhaseName("Phase " + (i + 1));
+                }
+            }
+        }
+
+        // Redirect back to main form with updated data
+        return "redirect:/?action=removed";
+    }
+
+    /**
      * REST API endpoint for external integrations
      */
     @PostMapping("/api/webster/calculate")
@@ -85,37 +126,20 @@ public class WebsterController {
     }
 
     /**
-     * Add a new phase via AJAX
+     * Handle GET requests with action parameter (from redirects)
      */
-    @PostMapping("/add-phase")
-    public String addPhase(@ModelAttribute WebsterCalculationInputDTO inputDTO, Model model) {
-        List<PhaseInputDTO> phases = inputDTO.getPhases();
-        if (phases == null) {
-            phases = new ArrayList<>();
-            inputDTO.setPhases(phases);
+    @GetMapping(value = "/", params = "action")
+    public String showInputFormWithAction(@RequestParam String action, Model model) {
+        // Show form with default values but add success message
+        showInputForm(model);
+
+        if ("added".equals(action)) {
+            model.addAttribute("successMessage", "Phase added successfully!");
+        } else if ("removed".equals(action)) {
+            model.addAttribute("successMessage", "Phase removed successfully!");
         }
 
-        int nextPhaseId = phases.size() + 1;
-        phases.add(createDefaultPhase(nextPhaseId, "Phase " + nextPhaseId, 400.0));
-
-        model.addAttribute("websterInput", inputDTO);
-        return "fragments/phase-input :: phase-list";
-    }
-
-    /**
-     * Remove a phase via AJAX
-     */
-    @PostMapping("/remove-phase/{index}")
-    public String removePhase(@PathVariable int index,
-                              @ModelAttribute WebsterCalculationInputDTO inputDTO,
-                              Model model) {
-        List<PhaseInputDTO> phases = inputDTO.getPhases();
-        if (phases != null && index >= 0 && index < phases.size()) {
-            phases.remove(index);
-        }
-
-        model.addAttribute("websterInput", inputDTO);
-        return "fragments/phase-input :: phase-list";
+        return "webster-input";
     }
 
     private PhaseInputDTO createDefaultPhase(int id, String name, double flow) {
