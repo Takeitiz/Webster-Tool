@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html layout:decorate="~{layout}" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<div layout:fragment="content">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-calculator me-2"></i>Webster Method Signal Timing Calculator</h4>
+                    <p class="mb-0">Calculate optimal cycle length and green time splits for traffic signals</p>
+                </div>
+                <div class="card-body">
+
+                    <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span th:text="${errorMessage}"></span>
+                    </div>
+
+                    <form th:action="@{/calculate}" th:object="${websterInput}" method="post">
+
+                        <!-- Global Parameters -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="fas fa-cog me-2"></i>Global Parameters</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label for="saturationFlowRate" class="form-label">Saturation Flow Rate (vph/lane)</label>
+                                        <input type="number" class="form-control" id="saturationFlowRate"
+                                               th:field="*{saturationFlowRate}" step="50" min="1500" max="2200">
+                                        <div class="form-text">Typical: 1800-1900 vph/lane</div>
+                                        <div th:if="${#fields.hasErrors('saturationFlowRate')}" class="text-danger">
+                                            <span th:errors="*{saturationFlowRate}"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="minCycleLength" class="form-label">Minimum Cycle Length (sec)</label>
+                                        <input type="number" class="form-control" id="minCycleLength"
+                                               th:field="*{minCycleLength}" min="30" max="120">
+                                        <div class="form-text">Typical: 60-80 seconds</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="maxCycleLength" class="form-label">Maximum Cycle Length (sec)</label>
+                                        <input type="number" class="form-control" id="maxCycleLength"
+                                               th:field="*{maxCycleLength}" min="90" max="300">
+                                        <div class="form-text">Typical: 120-150 seconds</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Phases Section -->
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5><i class="fas fa-list me-2"></i>Signal Phases</h5>
+                                <button type="button" class="btn btn-success btn-sm"
+                                        hx-post="/add-phase"
+                                        hx-target="#phase-list"
+                                        hx-include="form">
+                                    <i class="fas fa-plus me-1"></i>Add Phase
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="phase-list" th:include="fragments/phase-input :: phase-list"></div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-calculator me-2"></i>Calculate Optimal Timing
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</html>

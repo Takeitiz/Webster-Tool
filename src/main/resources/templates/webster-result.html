@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html layout:decorate="~{layout}" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<div layout:fragment="content">
+    <div class="row">
+        <!-- Results Summary -->
+        <div class="col-12 mb-4">
+            <div class="card result-card">
+                <div class="card-header bg-success text-white">
+                    <h4><i class="fas fa-check-circle me-2"></i>Webster Calculation Results</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <h5>Optimal Cycle Length</h5>
+                            <div class="cycle-display" th:text="${#numbers.formatDecimal(result.optimalCycleLength, 1, 1)} + ' sec'"></div>
+                        </div>
+                        <div class="col-md-3">
+                            <h5>Total Lost Time</h5>
+                            <div class="h3 text-warning" th:text="${#numbers.formatDecimal(result.totalLostTime, 1, 1)} + ' sec'"></div>
+                        </div>
+                        <div class="col-md-3">
+                            <h5>Flow Ratio (Y)</h5>
+                            <div class="h3" th:class="${result.totalFlowRatio >= 0.9} ? 'text-danger' : 'text-success'"
+                                 th:text="${#numbers.formatDecimal(result.totalFlowRatio, 1, 3)}"></div>
+                        </div>
+                        <div class="col-md-3">
+                            <h5>Status</h5>
+                            <div class="h4" th:class="${result.isOptimal} ? 'text-success' : 'text-warning'">
+                                <i th:class="${result.isOptimal} ? 'fas fa-check' : 'fas fa-exclamation-triangle'"></i>
+                                <span th:text="${result.isOptimal} ? 'Optimal' : 'Constrained'"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div th:if="${result.message}" class="alert alert-info mt-3" th:class="${result.totalFlowRatio >= 0.9} ? 'alert-warning' : 'alert-info'">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span th:text="${result.message}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase Details -->
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-table me-2"></i>Phase Timing Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-primary">
+                            <tr>
+                                <th>Phase</th>
+                                <th>Green Time</th>
+                                <th>Yellow</th>
+                                <th>All-Red</th>
+                                <th>Total</th>
+                                <th>Flow Ratio</th>
+                                <th>Saturation</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="phase : ${result.phaseResults}">
+                                <td>
+                                    <strong th:text="${phase.phaseName}"></strong>
+                                    <br>
+                                    <small class="text-muted">Phase <span th:text="${phase.phaseId}"></span></small>
+                                </td>
+                                <td class="phase-timing text-success" th:text="${phase.greenTime} + ' sec'"></td>
+                                <td th:text="${phase.yellowTime} + ' sec'"></td>
+                                <td th:text="${phase.allRedTime} + ' sec'"></td>
+                                <td class="fw-bold" th:text="${phase.totalPhaseTime} + ' sec'"></td>
+                                <td th:text="${#numbers.formatDecimal(phase.flowRatio, 1, 3)}"></td>
+                                <td th:class="${phase.degreeOfSaturation > 0.9} ? 'text-danger fw-bold' : 'text-success'"
+                                    th:text="${#numbers.formatDecimal(phase.degreeOfSaturation, 1, 2)}"></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="col-12 text-center">
+            <a href="/" class="btn btn-secondary me-2">
+                <i class="fas fa-arrow-left me-2"></i>New Calculation
+            </a>
+            <button class="btn btn-info" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Print Results
+            </button>
+        </div>
+    </div>
+</div>
+</html>
