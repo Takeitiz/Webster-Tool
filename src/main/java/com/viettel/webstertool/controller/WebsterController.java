@@ -4,6 +4,7 @@ import com.viettel.webstertool.dto.algo.PhaseInputDTO;
 import com.viettel.webstertool.dto.algo.WebsterCalculationInputDTO;
 import com.viettel.webstertool.dto.algo.WebsterCalculationResultDTO;
 import com.viettel.webstertool.service.ImprovedWebsterService;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,25 +24,30 @@ import java.util.List;
 public class WebsterController {
 
     private final ImprovedWebsterService websterService;
+    private static final String SESSION_FORM_KEY = "websterFormData";
 
     /**
      * Display the main input form
      */
     @GetMapping("/")
-    public String showInputForm(Model model) {
-        // Initialize with default values for better UX
-        WebsterCalculationInputDTO inputDTO = new WebsterCalculationInputDTO();
-        inputDTO.setSaturationFlowRate(1900.0);
-        inputDTO.setMinCycleLength(60);
-        inputDTO.setMaxCycleLength(150);
+    public String showInputForm(Model model, HttpSession session, @RequestParam(required = false) String action) {
+        WebsterCalculationInputDTO inputDTO = getFormDataFromSession(session);
 
-        // Add 2 default phases
-        List<PhaseInputDTO> defaultPhases = new ArrayList<>();
-        defaultPhases.add(createDefaultPhase(1, "North-South", 800.0));
-        defaultPhases.add(createDefaultPhase(2, "East-West", 600.0));
-        inputDTO.setPhases(defaultPhases);
+        if (inputDTO == null) {
+            // Initialize with default values for new sessions
+            inputDTO = createDefaultInputDTO();
+            saveFormDataToSession(session, inputDTO);
+        }
 
         model.addAttribute("websterInput", inputDTO);
+
+        // Add success messages for actions
+        if ("added".equals(action)) {
+            model.addAttribute("successMessage", "Phase added successfully!");
+        } else if ("removed".equals(action)) {
+            model.addAttribute("successMessage", "Phase removed successfully!");
+        }
+
         return "webster-input";
     }
 
@@ -50,7 +57,11 @@ public class WebsterController {
     @PostMapping("/calculate")
     public String calculateTiming(@Valid @ModelAttribute("websterInput") WebsterCalculationInputDTO inputDTO,
                                   BindingResult bindingResult,
-                                  Model model) {
+                                  Model model,
+                                  HttpSession session) {
+
+        // Save current form data to session
+        saveFormDataToSession(session, inputDTO);
 
         if (bindingResult.hasErrors()) {
             log.warn("Validation errors in input: {}", bindingResult.getAllErrors());
@@ -70,10 +81,13 @@ public class WebsterController {
     }
 
     /**
-     * Add a new phase - Simple approach without HTMX fragments
+     * Add a new phase
      */
     @PostMapping("/add-phase")
-    public String addPhase(@ModelAttribute("websterInput") WebsterCalculationInputDTO inputDTO) {
+    public String addPhase(@ModelAttribute("websterInput") WebsterCalculationInputDTO inputDTO,
+                           HttpSession session,
+                           RedirectAttributes redirectAttributes) {
+
         List<PhaseInputDTO> phases = inputDTO.getPhases();
         if (phases == null) {
             phases = new ArrayList<>();
@@ -83,16 +97,23 @@ public class WebsterController {
         int nextPhaseId = phases.size() + 1;
         phases.add(createDefaultPhase(nextPhaseId, "Phase " + nextPhaseId, 400.0));
 
-        // Redirect back to main form with updated data
+        // Save updated form data to session
+        saveFormDataToSession(session, inputDTO);
+
+        log.info("Added phase. Total phases now: {}", phases.size());
+
         return "redirect:/?action=added";
     }
 
     /**
-     * Remove a phase - Simple approach without HTMX fragments
+     * Remove a phase
      */
     @PostMapping("/remove-phase/{index}")
     public String removePhase(@PathVariable int index,
-                              @ModelAttribute("websterInput") WebsterCalculationInputDTO inputDTO) {
+                              @ModelAttribute("websterInput") WebsterCalculationInputDTO inputDTO,
+                              HttpSession session,
+                              RedirectAttributes redirectAttributes) {
+
         List<PhaseInputDTO> phases = inputDTO.getPhases();
         if (phases != null && index >= 0 && index < phases.size() && phases.size() > 1) {
             phases.remove(index);
@@ -104,10 +125,24 @@ public class WebsterController {
                     phases.get(i).setPhaseName("Phase " + (i + 1));
                 }
             }
+
+            // Save updated form data to session
+            saveFormDataToSession(session, inputDTO);
+
+            log.info("Removed phase at index {}. Total phases now: {}", index, phases.size());
         }
 
-        // Redirect back to main form with updated data
         return "redirect:/?action=removed";
+    }
+
+    /**
+     * Clear session and start fresh
+     */
+    @GetMapping("/reset")
+    public String resetForm(HttpSession session, RedirectAttributes redirectAttributes) {
+        session.removeAttribute(SESSION_FORM_KEY);
+        redirectAttributes.addFlashAttribute("successMessage", "Form reset to default values!");
+        return "redirect:/";
     }
 
     /**
@@ -125,21 +160,31 @@ public class WebsterController {
         }
     }
 
-    /**
-     * Handle GET requests with action parameter (from redirects)
-     */
-    @GetMapping(value = "/", params = "action")
-    public String showInputFormWithAction(@RequestParam String action, Model model) {
-        // Show form with default values but add success message
-        showInputForm(model);
+    // Helper methods
 
-        if ("added".equals(action)) {
-            model.addAttribute("successMessage", "Phase added successfully!");
-        } else if ("removed".equals(action)) {
-            model.addAttribute("successMessage", "Phase removed successfully!");
-        }
+    private WebsterCalculationInputDTO getFormDataFromSession(HttpSession session) {
+        return (WebsterCalculationInputDTO) session.getAttribute(SESSION_FORM_KEY);
+    }
 
-        return "webster-input";
+    private void saveFormDataToSession(HttpSession session, WebsterCalculationInputDTO inputDTO) {
+        session.setAttribute(SESSION_FORM_KEY, inputDTO);
+        log.debug("Saved form data to session with {} phases",
+                inputDTO.getPhases() != null ? inputDTO.getPhases().size() : 0);
+    }
+
+    private WebsterCalculationInputDTO createDefaultInputDTO() {
+        WebsterCalculationInputDTO inputDTO = new WebsterCalculationInputDTO();
+        inputDTO.setSaturationFlowRate(1900.0);
+        inputDTO.setMinCycleLength(60);
+        inputDTO.setMaxCycleLength(150);
+
+        // Add 2 default phases
+        List<PhaseInputDTO> defaultPhases = new ArrayList<>();
+        defaultPhases.add(createDefaultPhase(1, "North-South", 800.0));
+        defaultPhases.add(createDefaultPhase(2, "East-West", 600.0));
+        inputDTO.setPhases(defaultPhases);
+
+        return inputDTO;
     }
 
     private PhaseInputDTO createDefaultPhase(int id, String name, double flow) {
@@ -149,8 +194,8 @@ public class WebsterController {
                 .criticalFlow(flow)
                 .minGreenTime(15)
                 .maxGreenTime(60)
-                .yellowTime(4)
-                .allRedTime(2)
+                .yellowTime(3)
+                .allRedTime(1)
                 .build();
     }
 }

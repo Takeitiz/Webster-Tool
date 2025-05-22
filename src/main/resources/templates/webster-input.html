@@ -4,9 +4,14 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4><i class="fas fa-calculator me-2"></i>Webster Method Signal Timing Calculator</h4>
-                    <p class="mb-0">Calculate optimal cycle length and green time splits for traffic signals</p>
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4><i class="fas fa-calculator me-2"></i>Webster Method Signal Timing Calculator</h4>
+                        <p class="mb-0">Calculate optimal cycle length and green time splits for traffic signals</p>
+                    </div>
+                    <a href="/reset" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-refresh me-1"></i>Reset Form
+                    </a>
                 </div>
                 <div class="card-body">
 
@@ -60,7 +65,9 @@
                         <!-- Phases Section -->
                         <div class="card mb-4">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <h5><i class="fas fa-list me-2"></i>Signal Phases</h5>
+                                <h5><i class="fas fa-list me-2"></i>Signal Phases
+                                    <span class="badge bg-secondary ms-2" th:text="${#lists.size(websterInput.phases)}"></span>
+                                </h5>
                                 <button type="submit" class="btn btn-success btn-sm"
                                         formaction="/add-phase" formnovalidate>
                                     <i class="fas fa-plus me-1"></i>Add Phase
@@ -73,6 +80,7 @@
                                         <h6 class="mb-0">
                                             <i class="fas fa-traffic-light me-2"></i>
                                             Phase <span th:text="${phaseStat.index + 1}"></span>
+                                            <small class="text-muted ms-2" th:text="'(' + ${phase.phaseName} + ')'"></small>
                                         </h6>
                                         <button type="submit" class="btn btn-danger btn-sm"
                                                 th:if="${#lists.size(websterInput.phases) > 1}"
@@ -87,7 +95,8 @@
                                             <div class="col-md-3">
                                                 <label class="form-label">Phase Name</label>
                                                 <input type="text" class="form-control"
-                                                       th:field="*{phases[__${phaseStat.index}__].phaseName}">
+                                                       th:field="*{phases[__${phaseStat.index}__].phaseName}"
+                                                       placeholder="e.g., North-South">
                                                 <input type="hidden" th:field="*{phases[__${phaseStat.index}__].phaseId}">
                                                 <div th:if="${#fields.hasErrors('phases[__${phaseStat.index}__].phaseName')}" class="text-danger small">
                                                     <span th:errors="*{phases[__${phaseStat.index}__].phaseName}"></span>
@@ -97,7 +106,7 @@
                                                 <label class="form-label">Critical Flow (vph)</label>
                                                 <input type="number" class="form-control"
                                                        th:field="*{phases[__${phaseStat.index}__].criticalFlow}"
-                                                       step="50" min="0">
+                                                       step="50" min="0" placeholder="400">
                                                 <div class="form-text">Peak hour flow</div>
                                                 <div th:if="${#fields.hasErrors('phases[__${phaseStat.index}__].criticalFlow')}" class="text-danger small">
                                                     <span th:errors="*{phases[__${phaseStat.index}__].criticalFlow}"></span>
@@ -107,7 +116,7 @@
                                                 <label class="form-label">Min Green (sec)</label>
                                                 <input type="number" class="form-control"
                                                        th:field="*{phases[__${phaseStat.index}__].minGreenTime}"
-                                                       min="5" max="60">
+                                                       min="5" max="60" placeholder="15">
                                                 <div th:if="${#fields.hasErrors('phases[__${phaseStat.index}__].minGreenTime')}" class="text-danger small">
                                                     <span th:errors="*{phases[__${phaseStat.index}__].minGreenTime}"></span>
                                                 </div>
@@ -116,7 +125,7 @@
                                                 <label class="form-label">Max Green (sec)</label>
                                                 <input type="number" class="form-control"
                                                        th:field="*{phases[__${phaseStat.index}__].maxGreenTime}"
-                                                       min="10" max="120">
+                                                       min="10" max="120" placeholder="60">
                                                 <div th:if="${#fields.hasErrors('phases[__${phaseStat.index}__].maxGreenTime')}" class="text-danger small">
                                                     <span th:errors="*{phases[__${phaseStat.index}__].maxGreenTime}"></span>
                                                 </div>
@@ -125,7 +134,7 @@
                                                 <label class="form-label">Yellow (sec)</label>
                                                 <input type="number" class="form-control"
                                                        th:field="*{phases[__${phaseStat.index}__].yellowTime}"
-                                                       min="3" max="6">
+                                                       min="3" max="6" placeholder="3">
                                                 <div th:if="${#fields.hasErrors('phases[__${phaseStat.index}__].yellowTime')}" class="text-danger small">
                                                     <span th:errors="*{phases[__${phaseStat.index}__].yellowTime}"></span>
                                                 </div>
@@ -134,7 +143,7 @@
                                                 <label class="form-label">All-Red (sec)</label>
                                                 <input type="number" class="form-control"
                                                        th:field="*{phases[__${phaseStat.index}__].allRedTime}"
-                                                       min="0" max="5">
+                                                       min="0" max="5" placeholder="1">
                                                 <div th:if="${#fields.hasErrors('phases[__${phaseStat.index}__].allRedTime')}" class="text-danger small">
                                                     <span th:errors="*{phases[__${phaseStat.index}__].allRedTime}"></span>
                                                 </div>
@@ -142,12 +151,24 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Info box when no phases or only one phase -->
+                                <div th:if="${#lists.isEmpty(websterInput.phases)}" class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No phases configured. Click "Add Phase" to create your first phase.
+                                </div>
+
+                                <div th:if="${#lists.size(websterInput.phases) == 1}" class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    At least 2 phases are recommended for typical traffic signals.
+                                </div>
                             </div>
                         </div>
 
                         <!-- Submit Button -->
                         <div class="text-center">
-                            <button type="submit" class="btn btn-primary btn-lg">
+                            <button type="submit" class="btn btn-primary btn-lg"
+                                    th:disabled="${#lists.isEmpty(websterInput.phases)}">
                                 <i class="fas fa-calculator me-2"></i>Calculate Optimal Timing
                             </button>
                         </div>
